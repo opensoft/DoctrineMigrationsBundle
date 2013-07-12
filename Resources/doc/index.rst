@@ -274,6 +274,78 @@ to create a fresh database and run your migrations in order to get your database
 schema fully up to date. In fact, this is an easy and dependable workflow
 for your project.
 
+Container Aware Migrations
+--------------------------
+
+In some cases you might need access to the container to ensure the proper update of
+your data structure. This could be necessary to update relations with some specific
+logic or to create new entities. 
+
+Therefore you can just implement the ContainerAwareInterface with its needed methods
+to get full access to the container.
+
+.. code-block:: php
+
+    // ...
+    
+    class Version20130326212938 extends AbstractMigration implements ContainerAwareInterface
+    {
+    
+        private $container;
+    
+        public function setContainer(ContainerInterface $container = null)
+        {
+            $this->container = $container;
+        }
+    
+        public function up(Schema $schema)
+        {
+            // ... migration content
+        }
+    
+        public function postUp(Schema $schema)
+        {
+            $em = $this->container->get('doctrine.orm.entity_manager');
+            // ... update the entities
+        }
+    }
+
+Manual Tables
+-------------
+
+It is a common use case, that in addition to your generated database structure 
+based on your doctrine entities you might need custom tables. By default such 
+tables will be removed by the doctrine:migrations:diff command.
+
+If you follow a specific scheme you can configure doctrine/dbal to ignore those 
+tables. Let's say all custom tables will be prefixed by 't_'. In this case you 
+just have to add the following configuration option to your doctrine configuration:
+
+.. configuration-block::
+
+    .. code-block:: yaml
+    
+        doctrine:
+            dbal:        
+                schema_filter: ~^(?!t_)~
+                
+    .. code-block:: xml
+    
+        <doctrine:dbal schema-filter="~^(?!t_)~" ... />
+
+    
+    .. code-block:: php
+    
+        $container->loadFromExtension('doctrine', array(
+            'dbal' => array(
+                'schema_filter'  => '~^(?!t_)~',
+                // ...
+            ),
+            // ...
+        ));
+
+This ignores the tables on the DBAL level and they will be ignored by the diff command.
+
 .. _documentation: http://docs.doctrine-project.org/projects/doctrine-migrations/en/latest/index.html
 .. _DoctrineMigrationsBundle: https://github.com/doctrine/DoctrineMigrationsBundle
 .. _`Doctrine Database Migrations`: https://github.com/doctrine/migrations
